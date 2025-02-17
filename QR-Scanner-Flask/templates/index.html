@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Barcode Scanner</title>
+</head>
+<body>
+    <h2>Scan Barcode</h2>
+    <video id="video" width="400" height="300" autoplay></video>
+    <button onclick="capture()">Scan</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <p id="result"></p>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { console.error("Error accessing camera:", err); });
+
+        function capture() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(blob => {
+                let formData = new FormData();
+                formData.append("file", blob);
+
+                fetch("/scan", { method: "POST", body: formData })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById("result").innerText =
+                            data.barcodes.length > 0
+                                ? `Detected: ${data.barcodes[0].data} (${data.barcodes[0].type})`
+                                : "No barcode detected.";
+                    });
+            }, "image/png");
+        }
+    </script>
+</body>
+</html>
